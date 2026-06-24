@@ -111,7 +111,11 @@ def random_mapping_training_loop(
                 )
                 total_lm_loss += lm_loss
                 total_cos_loss += cos_loss
+            
+            optimizer.train()
             optimizer.step()
+            optimizer.eval()
+        
             model.zero_grad(set_to_none=True)
             if accelerator.is_main_process:
                 pbar.update(1)
@@ -203,7 +207,11 @@ def min_posterior_training_loop(
                 )
                 accelerator.backward(forget_loss)
                 total_loss += retain_loss.item() + forget_loss.item()
+            
+            optimizer.train()
             optimizer.step()
+            optimizer.eval()
+        
             model.zero_grad(set_to_none=True)
             if accelerator.is_main_process:
                 pbar.update(1)
@@ -303,8 +311,11 @@ def max_entropy_training_loop(
                 )
                 accelerator.backward(forget_loss)
                 total_loss += retain_loss.item() + forget_loss.item()
-
+            
+            optimizer.train()
             optimizer.step()
+            optimizer.eval()
+
             model.zero_grad(set_to_none=True)
             if accelerator.is_main_process:
                 pbar.update(1)
@@ -397,8 +408,11 @@ def llmu_training_loop(
                 total_loss += (
                     retain_loss.item() + forget_loss.item() + mismatch_loss.item()
                 )
-
+            
+            optimizer.train()
             optimizer.step()
+            optimizer.eval()
+
             model.zero_grad(set_to_none=True)
             if accelerator.is_main_process:
                 pbar.update(1)
@@ -502,8 +516,11 @@ def single_dataloader_accel_finetune_loop(
                 with_grad_loss += loss.item()
                 accelerator.backward(loss)
                 accelerator.wait_for_everyone()
-
+            
+            optimizer.train()
             optimizer.step()
+            optimizer.eval()
+
             optimizer.zero_grad()
             if kwargs["scheduler_type"] == "sgdr":
                 scheduler.step(i)
@@ -616,8 +633,10 @@ def double_dataloader_accel_finetune_loop(
                 accelerator.backward(loss)
                 accelerator.wait_for_everyone()
 
-            
+            optimizer.train()
             optimizer.step()
+            optimizer.eval()
+
             optimizer.zero_grad()
             if kwargs["scheduler_type"] == "sgdr":
                 scheduler.step(i)
@@ -777,7 +796,11 @@ def inner_loop_step(
         sub_pbar=sub_pbar,
         gradient_accumulation_steps=gradient_accumulation_steps,
     )
+    
+    inner_optimizer.train()
     inner_optimizer.step()
+    inner_optimizer.eval()
+
     if inner_scheduler:
         inner_scheduler.step()
     model.zero_grad(set_to_none=True)
@@ -1101,7 +1124,10 @@ def tar_training_loop(
         model_storage.clear_params()
 
         # Tamper-resistance meta-optimizer step
+        optimizer.train()
         optimizer.step()
+        optimizer.eval()
+
         model.zero_grad(set_to_none=True)
         if accelerator.is_main_process:
             pbar.update(1)
