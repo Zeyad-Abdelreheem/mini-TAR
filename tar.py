@@ -7,7 +7,7 @@ from typing import Callable
 import numpy as np
 import schedulefree
 import torch
-import wandb
+
 from accelerate import Accelerator, FullyShardedDataParallelPlugin
 from torch.distributed.fsdp.wrap import lambda_auto_wrap_policy
 from transformers import (
@@ -39,44 +39,48 @@ def lambda_fn(module: torch.nn.Module):
 
 
 def finetune_no_trainer(
-    model_name: str = "meta-llama/Meta-Llama-3-8B-Instruct",
+    model_name: str = "Qwen/Qwen2.5-0.5B-Instruct", #"meta-llama/Meta-Llama-3-8B-Instruct",
     output_dir: str = None,
     model_type: AutoModelForCausalLM = AutoModelForCausalLM,
     loop_type: Callable = tar_training_loop,
     dataloader_type: Callable = get_tar_bio_dataloaders,
-    tokenizer: str = "meta-llama/Meta-Llama-3-8B-Instruct",
+    tokenizer: str = "Qwen/Qwen2.5-0.5B-Instruct", #"meta-llama/Meta-Llama-3-8B-Instruct",
     args: argparse.Namespace = None,
 ):
+    
+    print('-----> 2')
     # Preparing FSDP (will remove for for FSDP2)
     auto_wrap_policy = functools.partial(lambda_auto_wrap_policy, lambda_fn=lambda_fn)
-    model = model_type.from_pretrained(model_name)
+    
+    print('-----> 2.1', model_name)
+    model = model_type.from_pretrained(model_name, torch_dtype=torch.float16)
+    
+    print('-----> 2.2')
     FSDP_PLUGIN = FullyShardedDataParallelPlugin(
         auto_wrap_policy=auto_wrap_policy,
     )
+    
+    print('-----> 2.3')
     accelerator = Accelerator(
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         fsdp_plugin=FSDP_PLUGIN,
     )
 
-    # Wandb logging
-    if accelerator.is_main_process:
-        wandb_mode = "online" if args.wandb else "disabled"
-        wandb.login()
-        wandb.init(
-            project=args.wandb_project_name,
-            config=args,
-            name="_".join(output_dir.split("/")),
-            mode=wandb_mode,
-        )
+    
+    print('-----> 3', tokenizer)
     accelerator.print("Beginning Training.")
     accelerator.free_memory()
     tokenizer = AutoTokenizer.from_pretrained(tokenizer)
     tokenizer.pad_token = tokenizer.eos_token
 
+    
+    print('-----> 4')
     # prepare model before optimizer: https://huggingface.co/blog/pytorch-fsdp
     model = accelerator.prepare_model(model)
     dataloaders = dataloader_type(tokenizer, accelerator, args=args, model=model)
 
+    
+    print('-----> 5')
     model.train()
     optimizer = schedulefree.AdamWScheduleFree(
         model.parameters(), lr=args.lr, warmup_steps=args.warmup_steps
@@ -85,6 +89,8 @@ def finetune_no_trainer(
     accelerator.print(f"model, optimizers, dataloaders prepared")
     accelerator.print(f"output_dir: {output_dir}")
 
+    
+    print('-----> 6')
     # Calls either the TAR loop or random vectors loop
     model = loop_type(
         model,
@@ -100,7 +106,8 @@ def finetune_no_trainer(
         save_function=accelerator.save,
         state_dict=accelerator.get_state_dict(model),
     )
-
+    
+    print('-----> 7')
 
 # Map the subject to the dataloader
 DATALOADER_MAP = {
@@ -118,11 +125,13 @@ TRAINING_CONFIG = {
 # Map for model types, can add more here
 MODEL_MAP = {
     "llama3": LlamaForCausalLM,
+    "qwen" : AutoModelForCausalLM
 }
 
 # Map for tokenizers, can add more here
 TOKENIZER_MAP = {
     "llama3": "meta-llama/Meta-Llama-3-8B-Instruct",
+    "qwen": "Qwen/Qwen2.5-0.5B-Instruct"
 }
 
 
@@ -144,13 +153,13 @@ def main():
         "--base_model_name",
         "-bm",
         type=str,
-        default="meta-llama/Meta-Llama-3-8B-Instruct",
+        default="Qwen/Qwen2.5-0.5B-Instruct", #"meta-llama/Meta-Llama-3-8B-Instruct",
     )
     parser.add_argument(
         "--retain_model_name",
         "-rm",
         type=str,
-        default="meta-llama/Meta-Llama-3-8B-Instruct",
+        default="Qwen/Qwen2.5-0.5B-Instruct", #"meta-llama/Meta-Llama-3-8B-Instruct",
     )
     parser.add_argument("--tar_inner_loop_steps", "-is", type=int, default=1)
     parser.add_argument("--tar_num_tasks_sampled", "-mnts", type=int, default=1)
@@ -185,13 +194,12 @@ def main():
     parser.add_argument(
         "--adversary_lr_samples", "-als", type=str, default="2e-6,2e-5,4e-5"
     )
-    parser.add_argument("--wandb", "-wb", action="store_true")
+    
     parser.add_argument("--unbounded", "-ub", action="store_true")
     parser.add_argument("--retain_same_base", "-rsb", action="store_true")
     parser.add_argument("--base", "-b", type=str, default="llama")
-    parser.add_argument(
-        "--wandb_project_name", "-wpn", type=str, default="tar_training"
-    )
+    
+    print('-----> 1')
     args = parser.parse_args()
     fix_seed()
     finetune_no_trainer(
