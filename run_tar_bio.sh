@@ -1,10 +1,10 @@
 
 accelerate launch --config_file "/kaggle/working/mini-TAR/configs/accel_config_2_gpu.yaml" tar.py \
 --trainer_type tar_trainer \
---max_steps 750 \
+--max_steps 1 \
 --tar_num_tasks_sampled 1 \
 --tar_tamper_resistance_loss_type max_entropy \
---tar_inner_loop_steps 64 \
+--tar_inner_loop_steps 8 \
 --retain_representations \
 --unbounded \
 --use_weighting_schedule \
@@ -14,19 +14,18 @@ accelerate launch --config_file "/kaggle/working/mini-TAR/configs/accel_config_2
 --warmup_steps 32 \
 --lr 2e-05 \
 --adversary_lr_samples 2e-6,2e-5,4e-5 \
---batch_size 8 \
---gradient_accumulation_steps 1 \
+--batch_size 4 \
+--gradient_accumulation_steps 2 \
 --adversary_dist_types pile-bio:0.33,camel-bio:0.33,retain_forget_switch:0.33 \
 --switching_point_coeffs alpha:6.0,beta:3.0 \
 --adversary_lr_schedulers constant:1.0 \
 --inner_optimizer_warmup_steps 20 \
---tar_inner_loop_subsample 4 \
---tar_adversary_batch_size 4 \
+--tar_inner_loop_subsample 2 \
+--tar_adversary_batch_size 2 \
 --base_model_name Qwen/Qwen2.5-0.5B-Instruct \
 --subject bio \
 --base qwen \
 --new_model_name Qwen2.5-0.5B-Instruct-TAR-Bio
-
 
 # python ./tar.py \
 # --trainer_type tar_trainer \

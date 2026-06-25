@@ -28,7 +28,7 @@ from torch.distributed import (
     all_gather,
     all_gather_into_tensor,
 )
-from ...modules.utils import fix_seed
+from modules.utils import fix_seed
 
 # Define allowed modules for FSDP wrapping
 ALLOWED_MODULES = [
