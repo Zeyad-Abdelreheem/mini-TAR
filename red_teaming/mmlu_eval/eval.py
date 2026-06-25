@@ -1,3 +1,4 @@
+
 import torch
 import os
 import random
@@ -80,11 +81,16 @@ def evaluate_subject(
         batch_squeezed = {key: value.squeeze(1) for key, value in batch.items()}
         labels = batch_squeezed["labels"][:, -1]
         labels = [tokenizer.decode(label.item()) for label in labels]
-
-        model_outputs = model(
-            input_ids=batch_squeezed["input_ids"],
-            attention_mask=batch_squeezed["attention_mask"],
-        )
+        
+        with torch.no_grad():
+            model_outputs = model(
+                input_ids=batch["input_ids"],
+                attention_mask=batch["attention_mask"],
+            )
+        # model_outputs = model(
+        #     input_ids=batch_squeezed["input_ids"],
+        #     attention_mask=batch_squeezed["attention_mask"],
+        # )
         logits = model_outputs.logits[:, -1]
 
         # Calculate probabilities for each answer option
@@ -187,10 +193,12 @@ def evaluate_model(model, tokenizer, accelerator, args):
         PAD_TOKEN = "[PAD]"
 
     # Prepare evaluation datasets
-    user = os.environ.get("USER")
-    data_dir = f"/data/{user}/capabilities-removal/batched_evaluation/data"
-    if not check_dir_has_headers(data_dir):
-        add_header_to_csv(data_dir)
+    # user = os.environ.get("USER")
+    # data_dir = f"/data/{user}/capabilities-removal/batched_evaluation/data"
+    # if not check_dir_has_headers(data_dir):
+    #     add_header_to_csv(data_dir)
+    if not check_dir_has_headers(args.path_to_data):
+        add_header_to_csv(args.path_to_data)
     accelerator.print(f"Datasets prepared.")
 
     subject_accs = {}  # Store the accuracy for each subject
