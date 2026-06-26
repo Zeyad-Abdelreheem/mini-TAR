@@ -1,10 +1,10 @@
 
-accelerate launch --config_file "/kaggle/working/mini-TAR/configs/accel_config_2_gpu.yaml" tar.py \
+accelerate launch --config_file "./configs/accel_config_2_gpu.yaml" tar.py \
 --trainer_type tar_trainer \
---max_steps 1 \
+--max_steps 100 \
 --tar_num_tasks_sampled 1 \
 --tar_tamper_resistance_loss_type max_entropy \
---tar_inner_loop_steps 8 \
+--tar_inner_loop_steps 16 \
 --retain_representations \
 --unbounded \
 --use_weighting_schedule \

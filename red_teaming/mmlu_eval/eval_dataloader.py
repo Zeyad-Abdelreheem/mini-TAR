@@ -117,6 +117,9 @@ def get_eval_datasets(
             truncation=True,
             return_tensors="pt",
         )
+        
+        # Add this: squeeze the extra batch dimension added by return_tensors="pt"
+        result = {k: v.squeeze(0) for k, v in result.items()}
 
         # Reduce the number of few-shot examples if the sequence is too long
         while result["input_ids"].shape[-1] > args.max_seq_len:
@@ -133,10 +136,14 @@ def get_eval_datasets(
                 return_tensors="pt",
             )
 
+            result = {k: v.squeeze(0) for k, v in result.items()}
+            
         # Tokenize the answer separately
         tokenized_label = tokenizer.__call__(
             sample["answer"], padding="longest", return_tensors="pt"
         )
+
+        tokenized_label = {k: v.squeeze(0) for k, v in tokenized_label.items()}
 
         # Set up labels based on whether to include answers
         if include_answer == True:
@@ -151,7 +158,7 @@ def get_eval_datasets(
 
     tokenize_without_answer = lambda sample: tokenize(sample, include_answer=False)
 
-    eval_dataset["train"] = eval_dataset["train"].map(tokenize_without_answer)
+    eval_dataset["train"] = eval_dataset["train"].map(tokenize_without_answer, load_from_cache_file=False)
 
     columns_to_remove = [
         "question",

@@ -259,7 +259,7 @@ def sft_red_teaming_evaluation(
                 "batch_size": 2,
                 "num_fewshot_examples": 5,
                 "max_seq_len": 2048,
-                "path_to_data": "/kaggle/working/mini-TAR/red_teaming/mmlu_eval/data",
+                "path_to_data": "./red_teaming/mmlu_eval/data",
                 "disable_file_writes": True,
                 "eos_pad_token": use_eos_token,
                 "save_file_dir": args.save_model_name,
