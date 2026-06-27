@@ -17,6 +17,7 @@ from .question_hash_table import QuestionHashTable, update_serialized_table
 from accelerate import Accelerator, FullyShardedDataParallelPlugin
 from transformers.models.llama.modeling_llama import LlamaDecoderLayer, LlamaForCausalLM
 from transformers.models.phi.modeling_phi import PhiDecoderLayer, PhiForCausalLM
+from transformers.models.qwen2.modeling_qwen2 import Qwen2DecoderLayer
 from transformers.models.mistral.modeling_mistral import (
     MistralDecoderLayer,
     MistralForCausalLM,
@@ -36,6 +37,7 @@ ALLOWED_MODULES = [
     LlamaDecoderLayer,
     PhiDecoderLayer,
     MistralDecoderLayer,
+    Qwen2DecoderLayer,
 ]
 
 # Define lambda function for FSDP auto wrap policy
@@ -268,7 +270,9 @@ def write_subject_table_to_file(subject_table, subject, tokenizer, args):
         if PAD_TOKEN == "[PAD]":
             pad_token_id_to_ignore = 0
         else:
-            pad_token_id_to_ignore = tokenizer.encode(tokenizer.pad_token)[1]  # NOTE: This will mark eos token (token_id 128009) for filtering.
+            # encode() may return [token_id] (Qwen) or [bos, token_id] (Llama-3)
+            encoded = tokenizer.encode(tokenizer.pad_token)
+            pad_token_id_to_ignore = encoded[-1]
 
         # Remove padding from input_ids
         unpadded_input_ids = list(
